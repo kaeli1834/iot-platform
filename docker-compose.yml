@@ -54,6 +54,14 @@ services:
     networks:
       - iot_net
 
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "4200:80"
+    networks:
+      - iot_net
+
 volumes:
   pgdata:
     driver: local
