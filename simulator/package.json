@@ -1,0 +1,12 @@
+{
+  "name": "iot-simulator",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node src/simulator.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "mqtt": "^5.0.0"
+  }
+}
