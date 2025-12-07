@@ -7,6 +7,27 @@ services:
       - "9001:9001"
     volumes:
       - ./infra/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    networks:
+      - iot_net
+
+  postgres_iot:
+    image: postgres:18
+    container_name: postgres_iot
+    restart: always
+    env_file:
+      - ./infra/postgres.env
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d ${POSTGRES_DB} -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - iot_net
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./infra/data/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   simulator:
     build: ./simulator
@@ -15,3 +36,29 @@ services:
       - ./simulator/.env
     depends_on:
       - mosquitto
+    networks:
+      - iot_net
+
+  backend:
+    build: ./backend
+    container_name: backend
+    env_file:
+      - ./backend/.env
+    depends_on:
+      postgres_iot:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    networks:
+      - iot_net
+
+volumes:
+  pgdata:
+    driver: local
+    
+
+networks:
+  iot_net:
+    driver: bridge
