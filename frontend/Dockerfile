@@ -1,4 +1,6 @@
-FROM node:20-alpine AS builder
+FROM node:lts-alpine AS builder
+# Update all base Alpine OS packages to their latest patched versions
+RUN apk update && apk upgrade --no-cache
 WORKDIR /app
 
 COPY package*.json ./

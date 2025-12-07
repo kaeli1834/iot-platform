@@ -1,7 +1,9 @@
 # ----------------------------------------------------
 # 1. BASE IMAGE FOR THE BUILD (Node + TS compiler)
 # ----------------------------------------------------
-FROM node:20-alpine AS builder
+FROM node:lts-alpine AS builder
+# Update all base Alpine OS packages to their latest patched versions
+RUN apk update && apk upgrade --no-cache
 
 WORKDIR /app
 
@@ -20,7 +22,9 @@ RUN npm run build
 # ----------------------------------------------------
 # 2. PRODUCTION IMAGE (only compiled JS + node_modules)
 # ----------------------------------------------------
-FROM node:20-alpine AS runner
+FROM node:lts-alpine AS production
+# Update all base Alpine OS packages to their latest patched versions
+RUN apk update && apk upgrade --no-cache
 
 WORKDIR /app
 
