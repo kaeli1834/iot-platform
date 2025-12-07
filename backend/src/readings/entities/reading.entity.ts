@@ -3,6 +3,7 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -17,7 +18,11 @@ export class Reading {
   id: number;
 
   @ManyToOne(() => Sensor, (sensor) => sensor.readings)
+  @JoinColumn({ name: 'sensor_id' })
   sensor: Sensor;
+
+  @Column()
+  sensorId: number;
 
   @Column()
   timestamp: Date;
