@@ -45,8 +45,10 @@ services:
     env_file:
       - ./backend/.env
     depends_on:
-      - postgres_iot
-      - mosquitto
+      postgres_iot:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
     ports:
       - "3000:3000"
     networks:
