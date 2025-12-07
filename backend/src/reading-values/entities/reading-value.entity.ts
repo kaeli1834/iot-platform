@@ -12,7 +12,7 @@ import { MetricType } from 'src/metric-types/entities/metric-type.entity';
 import { Reading } from 'src/readings/entities/reading.entity';
 
 @Entity('reading_values')
-@Index(['reading', 'metricType'], { unique: true })
+@Index(['readingId', 'metricTypeId'], { unique: true })
 export class ReadingValue {
   @PrimaryGeneratedColumn()
   id: number;
@@ -22,8 +22,14 @@ export class ReadingValue {
   })
   reading: Reading;
 
+  @Column()
+  readingId: number;
+
   @ManyToOne(() => MetricType, (metricType) => metricType.readingValues)
   metricType: MetricType;
+
+  @Column()
+  metricTypeId: number;
 
   @Column({ type: 'double precision' })
   value: number;
