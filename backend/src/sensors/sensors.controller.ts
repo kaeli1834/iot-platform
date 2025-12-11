@@ -1,9 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseInterceptors,
+} from '@nestjs/common';
 import { SensorsService } from './sensors.service';
 import { CreateSensorDto } from './dto/create-sensor.dto';
 import { UpdateSensorDto } from './dto/update-sensor.dto';
+import { ResponseSensorDto } from './dto/response-sensor.dto';
+import { TransformInterceptor } from '../common/interceptors/transform.interceptor';
 
 @Controller('sensors')
+@UseInterceptors(new TransformInterceptor(ResponseSensorDto))
 export class SensorsController {
   constructor(private readonly sensorsService: SensorsService) {}
 
