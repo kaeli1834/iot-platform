@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { Sensor } from '../sensors/entities/sensor.entity';
 import { MetricType } from 'src/metric-types/entities/metric-type.entity';
 import { Reading } from 'src/readings/entities/reading.entity';
@@ -33,55 +33,73 @@ export class IngestionService {
     private readonly metricRepo: Repository<MetricType>,
     @InjectRepository(ReadingValue)
     private readonly valueRepo: Repository<ReadingValue>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async processIncomingMessage(
     topic: string,
     payload: AggregatedPayload | SingleMetricPayload,
   ) {
-    // Detect format A (aggregated)
-    if ('values' in payload && Array.isArray(payload.values)) {
-      return this.saveAggregated(payload);
-    }
+    try {
+      // Detect format A (aggregated)
+      if ('values' in payload && Array.isArray(payload.values)) {
+        return await this.saveAggregated(payload);
+      }
 
-    // Detect format B (single metric)
-    if ('typeId' in payload && 'value' in payload) {
-      return this.saveSingleMetric(payload);
-    }
+      // Detect format B (single metric)
+      if ('typeId' in payload && 'value' in payload) {
+        return await this.saveSingleMetric(payload);
+      }
 
-    this.logger.warn(`Unknown payload format: ${JSON.stringify(payload)}`);
+      this.logger.warn(`Unknown payload format: ${JSON.stringify(payload)}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Failed to process message from ${topic}: ${message}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw error;
+    }
   }
 
   //------------------------------------------
   // FORMAT A : aggregated { sensorId, values[] }
   //------------------------------------------
   private async saveAggregated(data: AggregatedPayload) {
+    // validate data
+    if (data.timestamp === undefined || isNaN(Date.parse(data.timestamp))) {
+      throw new Error(`Invalid or missing timestamp: ${data.timestamp}`);
+    }
+
     const sensor = await this.getSensorOrFail(data.sensorId);
 
-    const reading = await this.readingRepo.save({
-      sensor,
-      timestamp: new Date(data.timestamp),
+    // Use transaction to ensure atomicity
+    await this.dataSource.transaction(async (manager) => {
+      const reading = await manager.save(Reading, {
+        sensor,
+        timestamp: new Date(data.timestamp),
+      });
+
+      // Batch fetch all metrics (avoid N+1)
+      const typeIds = data.values.map((v) => v.typeId);
+      const metrics = await this.getMetricTypesOrFail(typeIds);
+
+      // Prepare bulk insert
+      const readingValues = data.values.map((v) => {
+        const metric = metrics.get(v.typeId);
+        if (!metric) {
+          throw new Error(`MetricType not registered: ${v.typeId}`);
+        }
+        return {
+          reading,
+          metricType: metric,
+          value: v.value,
+        };
+      });
+
+      // Batch insert all values at once
+      await manager.save(ReadingValue, readingValues);
     });
-
-    // Batch fetch all metrics (avoid N+1)
-    const typeIds = data.values.map((v) => v.typeId);
-    const metrics = await this.getMetricTypesOrFail(typeIds);
-
-    // Prepare bulk insert
-    const readingValues = data.values.map((v) => {
-      const metric = metrics.get(v.typeId);
-      if (!metric) {
-        throw new Error(`MetricType not registered: ${v.typeId}`);
-      }
-      return {
-        reading,
-        metricType: metric,
-        value: v.value,
-      };
-    });
-
-    // Batch insert all values at once
-    await this.valueRepo.save(readingValues);
 
     this.logger.log(
       `Aggregated data stored - Sensor: ${data.sensorId}, Values: ${data.values.length}`,
@@ -92,6 +110,10 @@ export class IngestionService {
   // FORMAT B : single metric
   //------------------------------------------
   private async saveSingleMetric(data: SingleMetricPayload) {
+    if (data.timestamp === undefined || isNaN(Date.parse(data.timestamp))) {
+      throw new Error(`Invalid or missing timestamp: ${data.timestamp}`);
+    }
+
     const sensor = await this.getSensorOrFail(data.sensorId);
     const metric = await this.getMetricTypeOrFail(data.typeId);
 
@@ -165,29 +187,23 @@ export class IngestionService {
       }
     }
 
-    // Fetch missing from DB
+    // Fetch missing from DB using IN clause
     if (missing.length > 0) {
       const metrics = await this.metricRepo.find({
-        where: { typeUid: missing.length === 1 ? missing[0] : undefined },
+        where: { typeUid: In(missing) },
       });
 
-      // If query didn't work with IN clause, do it properly
-      if (metrics.length === 0 && missing.length > 0) {
-        for (const typeId of missing) {
-          const metric = await this.metricRepo.findOne({
-            where: { typeUid: typeId },
-          });
-          if (!metric) {
-            throw new Error(`MetricType not registered: ${typeId}`);
-          }
-          result.set(typeId, metric);
-          this.metricCache.set(typeId, metric);
-        }
-      } else {
-        for (const metric of metrics) {
-          result.set(metric.typeUid, metric);
-          this.metricCache.set(metric.typeUid, metric);
-        }
+      // Cache and map results
+      for (const metric of metrics) {
+        result.set(metric.typeUid, metric);
+        this.metricCache.set(metric.typeUid, metric);
+      }
+
+      // Check if any are still missing
+      const found = new Set(metrics.map((m) => m.typeUid));
+      const notFound = missing.filter((id) => !found.has(id));
+      if (notFound.length > 0) {
+        throw new Error(`MetricType(s) not registered: ${notFound.join(', ')}`);
       }
     }
 

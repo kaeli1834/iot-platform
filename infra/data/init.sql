@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS sensors (
     deleted_at TIMESTAMPTZ
 );
 
--- add 4 sensors for testing
+-- Add 4 sensors for testing
 INSERT INTO sensors (sensor_uid, name, location)
 VALUES 
     ('sensor_001', 'Temperature Sensor 1', 'Warehouse A'),
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS metric_types (
     CONSTRAINT metric_types_type_uid_unit_key UNIQUE (type_uid, unit)
 );
 
--- add some metric types for testing
+-- Add some metric types for testing
 INSERT INTO metric_types (type_uid, unit, description)
 VALUES
     ('temperature', '°C', 'Ambient temperature in Celsius'),

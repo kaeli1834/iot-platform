@@ -85,9 +85,45 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
   private isValidPayload(
     payload: unknown,
   ): payload is AggregatedPayload | SingleMetricPayload {
-    this.logger.debug(
-      `Validating payload: ${JSON.stringify(payload).substring(0, 100)}`,
+    if (payload === null || typeof payload !== 'object') {
+      return false;
+    }
+
+    const obj = payload as Record<string, unknown>;
+
+    const hasSensorId =
+      'sensorId' in obj &&
+      typeof obj['sensorId'] === 'string' &&
+      obj.sensorId.length > 0;
+
+    const hasTimestamp =
+      'timestamp' in obj &&
+      typeof obj['timestamp'] === 'string' &&
+      !isNaN(Date.parse(obj.timestamp));
+
+    const hasValidValueArray =
+      Array.isArray(obj.values) &&
+      obj.values.length > 0 &&
+      obj.values.every((v) => {
+        if (typeof v !== 'object' || v === null) return false;
+        const item = v as Record<string, unknown>;
+        return (
+          'typeId' in item &&
+          'value' in item &&
+          (typeof item.typeId === 'string' ||
+            typeof item.typeId === 'number') &&
+          typeof item.value === 'number'
+        );
+      });
+
+    const hasTypeIdAndValue =
+      'typeId' in obj &&
+      'value' in obj &&
+      (typeof obj.typeId === 'string' || typeof obj.typeId === 'number') &&
+      (typeof obj.value === 'number' || typeof obj.value === 'string'); // allow numeric strings
+
+    return (
+      hasSensorId && hasTimestamp && (hasValidValueArray || hasTypeIdAndValue)
     );
-    return payload !== null && typeof payload === 'object';
   }
 }
