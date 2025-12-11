@@ -21,10 +21,9 @@ export class Reading {
   @JoinColumn({ name: 'sensor_id' })
   sensor: Sensor;
 
-  @Column()
-  sensorId: number;
+  // The foreign key column is managed by the relation above (sensor_id)
 
-  @Column()
+  @Column({ name: 'timestamp', type: 'timestamptz' })
   timestamp: Date;
 
   @CreateDateColumn({ name: 'created_at' })

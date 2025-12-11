@@ -8,6 +8,10 @@ import { MetricTypesModule } from './metric-types/metric-types.module';
 import { ReadingsModule } from './readings/readings.module';
 import { ReadingValuesModule } from './reading-values/reading-values.module';
 
+// ingestion
+import { IngestionModule } from './ingestion/ingestion.module';
+import { MqttModule } from './mqtt/mqtt.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -21,7 +25,9 @@ import { ReadingValuesModule } from './reading-values/reading-values.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: true, // Note: set to false in production --> !ONLY FOR DEV
+        synchronize: false,
+        migrations: ['dist/migrations/*.js'],
+        migrationsRun: false,
       }),
       inject: [ConfigService],
     }),
@@ -29,6 +35,8 @@ import { ReadingValuesModule } from './reading-values/reading-values.module';
     MetricTypesModule,
     ReadingsModule,
     ReadingValuesModule,
+    IngestionModule,
+    MqttModule,
   ],
   controllers: [AppController],
   providers: [AppService],
