@@ -53,7 +53,7 @@ client.on("connect", () => {
         const topic = `iot/${sensorId}/data`;
         client.publish(topic, JSON.stringify(fullPayload));
 
-        console.log(`[AGGREGATED] ${sensorId} → ${topic}`);
+        //console.log(`[AGGREGATED] ${sensorId} → ${topic}`);
       }
 
       // Send individual MQTT messages (mode: multi or both)
@@ -69,9 +69,9 @@ client.on("connect", () => {
 
           client.publish(topic, payload);
 
-          console.log(
-            `[METRIC] ${sensorId} → ${valueObj.typeId} = ${valueObj.value}`,
-          );
+          //console.log(
+          //  `[METRIC] ${sensorId} → ${valueObj.typeId} = ${valueObj.value}`,
+          //);
         });
       }
     });
