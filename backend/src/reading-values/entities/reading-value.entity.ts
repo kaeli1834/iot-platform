@@ -4,6 +4,7 @@ import {
   DeleteDateColumn,
   Entity,
   Index,
+  JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -12,7 +13,7 @@ import { MetricType } from 'src/metric-types/entities/metric-type.entity';
 import { Reading } from 'src/readings/entities/reading.entity';
 
 @Entity('reading_values')
-@Index(['readingId', 'metricTypeId'], { unique: true })
+@Index(['reading', 'metricType'], { unique: true })
 export class ReadingValue {
   @PrimaryGeneratedColumn()
   id: number;
@@ -20,16 +21,12 @@ export class ReadingValue {
   @ManyToOne(() => Reading, (reading) => reading.readingValues, {
     onDelete: 'CASCADE',
   })
+  @JoinColumn({ name: 'reading_id' })
   reading: Reading;
 
-  @Column()
-  readingId: number;
-
   @ManyToOne(() => MetricType, (metricType) => metricType.readingValues)
+  @JoinColumn({ name: 'metric_type_id' })
   metricType: MetricType;
-
-  @Column()
-  metricTypeId: number;
 
   @Column({ type: 'double precision' })
   value: number;

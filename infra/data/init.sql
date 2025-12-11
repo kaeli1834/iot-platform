@@ -16,6 +16,15 @@ CREATE TABLE IF NOT EXISTS sensors (
     deleted_at TIMESTAMPTZ
 );
 
+-- add 4 sensors for testing
+INSERT INTO sensors (sensor_uid, name, location)
+VALUES 
+    ('sensor_001', 'Temperature Sensor 1', 'Warehouse A'),
+    ('sensor_002', 'Humidity Sensor 1', 'Warehouse B'),
+    ('sensor_003', 'Pressure Sensor 1', 'Warehouse C'),
+    ('sensor_004', 'Light Sensor 1', 'Warehouse D')
+ON CONFLICT (sensor_uid) DO NOTHING;
+
 --------------------------------------------------------
 -- 2) TABLE: METRIC TYPES
 --------------------------------------------------------
@@ -29,6 +38,16 @@ CREATE TABLE IF NOT EXISTS metric_types (
     deleted_at TIMESTAMPTZ,
     CONSTRAINT metric_types_type_uid_unit_key UNIQUE (type_uid, unit)
 );
+
+-- add some metric types for testing
+INSERT INTO metric_types (type_uid, unit, description)
+VALUES
+    ('temperature', '°C', 'Ambient temperature in Celsius'),
+    ('humidity', '%', 'Relative humidity percentage'),
+    ('pressure', 'hPa', 'Atmospheric pressure in hectopascals'),
+    ('light', 'lux', 'Illuminance in lux'),
+    ('co2', 'ppm', 'Carbon dioxide concentration in parts per million')
+ON CONFLICT (type_uid, unit) DO NOTHING;
 
 --------------------------------------------------------
 -- 3) TABLE: READINGS
@@ -62,28 +81,3 @@ CREATE TABLE IF NOT EXISTS reading_values (
 CREATE INDEX IF NOT EXISTS idx_readings_sensor_id ON readings(sensor_id);
 CREATE INDEX IF NOT EXISTS idx_reading_values_reading_id ON reading_values(reading_id);
 CREATE INDEX IF NOT EXISTS idx_reading_values_metric_type_id ON reading_values(metric_type_id);
-
---------------------------------------------------------
--- 6) SEED SENSORS
---------------------------------------------------------
-
-INSERT INTO sensors (sensor_uid, name, location)
-VALUES 
-    ('sensor1', 'Living Room Sensor', 'Living Room'),
-    ('sensor2', 'Office Sensor', 'Office')
-ON CONFLICT (sensor_uid) DO NOTHING;
-
---------------------------------------------------------
--- 7) SEED METRIC TYPES
---------------------------------------------------------
-
-INSERT INTO metric_types (type_uid, unit, description)
-VALUES
-    ('temperature', '°C', 'Ambient temperature in Celsius'),
-    ('temperature', 'K', 'Ambient temperature in Kelvin'),
-    ('humidity', '%', 'Relative humidity')
-ON CONFLICT (type_uid, unit) DO NOTHING;
-
---------------------------------------------------------
--- END
---------------------------------------------------------

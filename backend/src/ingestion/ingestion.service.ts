@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Sensor } from '../sensors/entities/sensor.entity';
@@ -21,6 +21,10 @@ export interface SingleMetricPayload {
 
 @Injectable()
 export class IngestionService {
+  private readonly logger = new Logger(IngestionService.name);
+  private sensorCache = new Map<string, Sensor>();
+  private metricCache = new Map<string, MetricType>();
+
   constructor(
     @InjectRepository(Sensor) private readonly sensorRepo: Repository<Sensor>,
     @InjectRepository(Reading)
@@ -45,7 +49,7 @@ export class IngestionService {
       return this.saveSingleMetric(payload);
     }
 
-    console.warn('[Ingestion] Unknown payload format:', payload);
+    this.logger.warn(`Unknown payload format: ${JSON.stringify(payload)}`);
   }
 
   //------------------------------------------
@@ -59,19 +63,28 @@ export class IngestionService {
       timestamp: new Date(data.timestamp),
     });
 
-    for (const v of data.values) {
-      const metric = await this.getMetricTypeOrFail(v.typeId);
+    // Batch fetch all metrics (avoid N+1)
+    const typeIds = data.values.map((v) => v.typeId);
+    const metrics = await this.getMetricTypesOrFail(typeIds);
 
-      await this.valueRepo.save({
+    // Prepare bulk insert
+    const readingValues = data.values.map((v) => {
+      const metric = metrics.get(v.typeId);
+      if (!metric) {
+        throw new Error(`MetricType not registered: ${v.typeId}`);
+      }
+      return {
         reading,
         metricType: metric,
         value: v.value,
-      });
-    }
+      };
+    });
 
-    console.log(
-      '[Ingestion] Aggregated stored for registered sensor:',
-      data.sensorId,
+    // Batch insert all values at once
+    await this.valueRepo.save(readingValues);
+
+    this.logger.log(
+      `Aggregated data stored - Sensor: ${data.sensorId}, Values: ${data.values.length}`,
     );
   }
 
@@ -93,32 +106,91 @@ export class IngestionService {
       value: data.value,
     });
 
-    console.log(
-      '[Ingestion] Metric stored for registered sensor:',
-      data.sensorId,
+    this.logger.log(
+      `Single metric stored - Sensor: ${data.sensorId}, Type: ${data.typeId}`,
     );
   }
 
   //------------------------------------------
   // HELPERS
   //------------------------------------------
-  private async getSensorOrFail(sensorId: string) {
+  private async getSensorOrFail(sensorId: string): Promise<Sensor> {
+    // Check cache first
+    if (this.sensorCache.has(sensorId)) {
+      return this.sensorCache.get(sensorId)!;
+    }
+
     const sensor = await this.sensorRepo.findOne({
       where: { sensorUid: sensorId },
     });
     if (!sensor) {
       throw new Error(`Sensor not registered: ${sensorId}`);
     }
+
+    // Cache the result
+    this.sensorCache.set(sensorId, sensor);
     return sensor;
   }
 
-  private async getMetricTypeOrFail(typeId: string) {
+  private async getMetricTypeOrFail(typeId: string): Promise<MetricType> {
+    // Check cache first
+    if (this.metricCache.has(typeId)) {
+      return this.metricCache.get(typeId)!;
+    }
+
     const metric = await this.metricRepo.findOne({
       where: { typeUid: typeId },
     });
     if (!metric) {
       throw new Error(`MetricType not registered: ${typeId}`);
     }
+
+    // Cache the result
+    this.metricCache.set(typeId, metric);
     return metric;
+  }
+
+  private async getMetricTypesOrFail(
+    typeIds: string[],
+  ): Promise<Map<string, MetricType>> {
+    const result = new Map<string, MetricType>();
+    const missing: string[] = [];
+
+    // Check cache first
+    for (const id of typeIds) {
+      if (this.metricCache.has(id)) {
+        result.set(id, this.metricCache.get(id)!);
+      } else {
+        missing.push(id);
+      }
+    }
+
+    // Fetch missing from DB
+    if (missing.length > 0) {
+      const metrics = await this.metricRepo.find({
+        where: { typeUid: missing.length === 1 ? missing[0] : undefined },
+      });
+
+      // If query didn't work with IN clause, do it properly
+      if (metrics.length === 0 && missing.length > 0) {
+        for (const typeId of missing) {
+          const metric = await this.metricRepo.findOne({
+            where: { typeUid: typeId },
+          });
+          if (!metric) {
+            throw new Error(`MetricType not registered: ${typeId}`);
+          }
+          result.set(typeId, metric);
+          this.metricCache.set(typeId, metric);
+        }
+      } else {
+        for (const metric of metrics) {
+          result.set(metric.typeUid, metric);
+          this.metricCache.set(metric.typeUid, metric);
+        }
+      }
+    }
+
+    return result;
   }
 }
