@@ -1,9 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseInterceptors,
+} from '@nestjs/common';
 import { MetricTypesService } from './metric-types.service';
 import { CreateMetricTypeDto } from './dto/create-metric-type.dto';
 import { UpdateMetricTypeDto } from './dto/update-metric-type.dto';
+import { ResponseMetricTypeDto } from './dto/response-metric-type.dto';
+import { TransformInterceptor } from 'src/common/interceptors/transform.interceptor';
 
 @Controller('metric-types')
+@UseInterceptors(new TransformInterceptor(ResponseMetricTypeDto))
 export class MetricTypesController {
   constructor(private readonly metricTypesService: MetricTypesService) {}
 
@@ -23,7 +35,10 @@ export class MetricTypesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateMetricTypeDto: UpdateMetricTypeDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateMetricTypeDto: UpdateMetricTypeDto,
+  ) {
     return this.metricTypesService.update(+id, updateMetricTypeDto);
   }
 
