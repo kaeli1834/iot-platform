@@ -1,34 +1,36 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { ReadingsService } from './readings.service';
-import { CreateReadingDto } from './dto/create-reading.dto';
-import { UpdateReadingDto } from './dto/update-reading.dto';
+import { ResponseReadingDto } from './dto/response-reading.dto';
+import { TransformInterceptor } from 'src/common/interceptors/transform.interceptor';
+import { Query, UseInterceptors } from '@nestjs/common/decorators';
 
 @Controller('readings')
+@UseInterceptors(new TransformInterceptor(ResponseReadingDto))
 export class ReadingsController {
   constructor(private readonly readingsService: ReadingsService) {}
 
-  @Post()
-  create(@Body() createReadingDto: CreateReadingDto) {
-    return this.readingsService.create(createReadingDto);
+  // get lasts 100 readings for a sensor
+  @Get('lasts')
+  findBySensor(
+    @Query('sensorId') sensorId: string,
+    @Query('limit') limit: string = '100',
+  ) {
+    return this.readingsService.findBySensor(+sensorId, +limit);
   }
 
-  @Get()
-  findAll() {
-    return this.readingsService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.readingsService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateReadingDto: UpdateReadingDto) {
-    return this.readingsService.update(+id, updateReadingDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.readingsService.remove(+id);
+  // get readings for a sensor between two dates and metric
+  @Get('range')
+  findBySensorBetweenDates(
+    @Query('sensorId') sensorId: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Query('metricTypeId') metricTypeId: string,
+  ) {
+    return this.readingsService.findBySensorBetweenDates(
+      +sensorId,
+      new Date(startDate),
+      new Date(endDate),
+      +metricTypeId,
+    );
   }
 }
