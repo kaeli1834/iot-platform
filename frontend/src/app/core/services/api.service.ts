@@ -121,6 +121,7 @@ export class ApiService {
 
   private handleError(error: any): Observable<never> {
     let apiError: ApiError;
+    console.log('API SERVICE ERROR:', error);
 
     if (error instanceof HttpErrorResponse) {
       // HTTP error

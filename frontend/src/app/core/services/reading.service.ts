@@ -10,16 +10,18 @@ export class ReadingService {
 
   // get lasts readings for a sensor
   getLastReadingsForSensor(sensorId: number, limit?: number) {
-    const path = `${this.basePath}/sensor/lasts/sensorId?${sensorId}&limit=${limit}`;
-    return this.api.get<any[]>(path);
+    const params: Record<string, any> = { sensorId };
+    if (limit) params['limit'] = limit;
+    return this.api.get<any[]>(`${this.basePath}/lasts`, { params });
   }
 
   getRange(sensorId: number, start: Date, end: Date, metricId?: number) {
-    const path = `${
-      this.basePath
-    }/sensor/range?sensorId=${sensorId}&start=${start.toISOString()}&end=${end.toISOString()}${
-      metricId ? `&metricId=${metricId}` : ''
-    }`;
-    return this.api.get<any[]>(path);
+    const params: Record<string, any> = {
+      sensorId,
+      start: start.toISOString(),
+      end: end.toISOString(),
+    };
+    if (metricId) params['metricId'] = metricId;
+    return this.api.get<any[]>(`${this.basePath}/range`, { params });
   }
 }

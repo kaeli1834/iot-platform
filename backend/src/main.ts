@@ -9,8 +9,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
   app.enableCors({
-    origin: [config().parsed?.FRONTEND_URL || 'http://localhost:4200'],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: process.env.FRONTEND_URL || 'http://localhost:4200',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   }); // Configure CORS properly for production
   app.useGlobalPipes(
