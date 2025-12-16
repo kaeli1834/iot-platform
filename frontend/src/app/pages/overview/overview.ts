@@ -1,22 +1,56 @@
 import { Component, OnInit, OnDestroy, viewChild, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { BaseChartDirective } from 'ng2-charts';
-import { ChartConfiguration, ChartType, Chart } from 'chart.js';
-import * as zoomPlugin from 'chartjs-plugin-zoom';
+import {
+  ChartConfiguration,
+  ChartType,
+  Chart,
+  TimeScale,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  LineController,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import 'chartjs-adapter-date-fns';
+import zoomPlugin from 'chartjs-plugin-zoom';
 import { interval, Subscription } from 'rxjs';
+
 import { ReadingService } from '../../core/services/reading.service';
 import { MetricTypeService } from '../../core/services/metric-type.service';
 import { ReadingDto } from '../../core/types/reading.type';
 import { MetricTypeDto } from '../../core/types/metric-type.type';
 
+Chart.register(
+  TimeScale,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  LineController,
+  Title,
+  Tooltip,
+  Legend,
+  zoomPlugin
+);
+
 @Component({
   selector: 'app-overview',
-  imports: [BaseChartDirective],
+  imports: [CommonModule, BaseChartDirective],
   templateUrl: './overview.html',
   styleUrl: './overview.scss',
 })
 export class Overview implements OnInit, OnDestroy {
   chart = viewChild(BaseChartDirective);
   private pollingSub?: Subscription;
+
+  private readingService = inject(ReadingService);
+  private metricTypeService = inject(MetricTypeService);
+
+  metricTypes: MetricTypeDto[] = [];
 
   public lineChartType: ChartType = 'line';
 
@@ -54,17 +88,12 @@ export class Overview implements OnInit, OnDestroy {
     },
   };
 
-  private readingService = inject(ReadingService);
-  private metricTypeService = inject(MetricTypeService);
-
-  metricTypes: MetricTypeDto[] = [];
-
-  ngOnInit() {
+  ngOnInit(): void {
     this.fetchMetricTypes();
     this.startPolling();
   }
 
-  ngOnDestroy() {
+  ngOnDestroy(): void {
     this.pollingSub?.unsubscribe();
   }
 
@@ -76,46 +105,39 @@ export class Overview implements OnInit, OnDestroy {
   }
 
   private fetchLatestReadings(): void {
-    const sensorId = 1; // Example sensor ID
+    const sensorId = 1;
+
     this.readingService.getLastReadingsForSensor(sensorId, 50).subscribe({
-      next: (readings: ReadingDto[]) => {
-        this.updateChart(readings);
-      },
-      error: (err) => {
-        console.error('Erreur sur les readings :', err);
-      },
+      next: (readings) => this.updateChart(readings),
+      error: (err) => console.error('Erreur sur les readings :', err),
     });
   }
 
   private fetchMetricTypes(): void {
     this.metricTypeService.getMetricTypes().subscribe({
-      next: (metricTypes: MetricTypeDto[]) => {
-        this.metricTypes = metricTypes;
-      },
-      error: (err) => {
-        console.error('Erreur sur les types de métriques :', err);
-      },
+      next: (metricTypes) => (this.metricTypes = metricTypes),
+      error: (err) => console.error('Erreur sur les types de métriques :', err),
     });
   }
 
-  private updateChart(readings: ReadingDto[]) {
-    // Regrouper par metricTypeUid et timestamp
-    const groupedByMetric: Record<string, Record<number, number>> = {};
+  private updateChart(readings: ReadingDto[]): void {
+    const grouped: Record<string, { x: number; y: number }[]> = {};
 
     for (const r of readings) {
       const time = new Date(r.timestamp).getTime();
 
-      if (!groupedByMetric[r.metricTypeUid]) {
-        groupedByMetric[r.metricTypeUid] = {};
+      if (!grouped[r.metricTypeUid]) {
+        grouped[r.metricTypeUid] = [];
       }
 
-      groupedByMetric[r.metricTypeUid][time] = r.value;
+      grouped[r.metricTypeUid].push({
+        x: time,
+        y: r.value,
+      });
     }
 
-    // Réinitialiser les datasets
     this.lineChartData.datasets = [];
 
-    // Couleurs pour différentes métriques
     const colors: Record<string, string> = {
       temperature: '#ff6384',
       humidity: '#36a2eb',
@@ -124,27 +146,21 @@ export class Overview implements OnInit, OnDestroy {
       co2: '#9966ff',
     };
 
-    // Créer un dataset par métrique
-    Object.entries(groupedByMetric).forEach(([metricUid, values]) => {
-      const dataPoints = Object.entries(values).map(([time, value]) => ({
-        x: parseInt(time),
-        y: value,
-      }));
-
-      // Trier par timestamp
-      dataPoints.sort((a, b) => a.x - b.x);
+    Object.entries(grouped).forEach(([metricUid, points]) => {
+      points.sort((a, b) => a.x - b.x);
 
       this.lineChartData.datasets.push({
-        label: metricUid.charAt(0).toUpperCase() + metricUid.slice(1),
-        data: dataPoints,
-        borderColor: colors[metricUid] || '#999999',
-        backgroundColor: `${colors[metricUid]}20` || '#99999920',
+        label: metricUid,
+        data: points,
+        borderColor: colors[metricUid] ?? '#999',
+        backgroundColor: `${colors[metricUid] ?? '#999'}20`,
         tension: 0.3,
         pointRadius: 0,
         borderWidth: 2,
       });
     });
 
-    this.chart()?.update();
+    // ⚠️ mise à jour CORRECTE
+    this.chart()?.chart?.update();
   }
 }
