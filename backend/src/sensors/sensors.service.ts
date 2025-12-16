@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { CreateSensorDto } from './dto/create-sensor.dto';
 import { UpdateSensorDto } from './dto/update-sensor.dto';
-import { InjectRepository } from '@nestjs/typeorm/dist/common/typeorm.decorators';
 import { Sensor } from './entities/sensor.entity';
 import { Repository } from 'typeorm/browser/repository/Repository.js';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class SensorsService {
@@ -11,7 +11,8 @@ export class SensorsService {
   private sensorRepository: Repository<Sensor>;
 
   create(createSensorDto: CreateSensorDto) {
-    return this.sensorRepository.create(createSensorDto);
+    const sensor = this.sensorRepository.create(createSensorDto);
+    return this.sensorRepository.save(sensor);
   }
 
   findAll() {
