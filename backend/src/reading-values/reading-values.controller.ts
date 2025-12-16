@@ -1,7 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ReadingValuesService } from './reading-values.service';
 import { CreateReadingValueDto } from './dto/create-reading-value.dto';
 import { UpdateReadingValueDto } from './dto/update-reading-value.dto';
+import { IdParamDto } from '../common/dto/id-param.dto';
 
 @Controller('reading-values')
 export class ReadingValuesController {
@@ -18,17 +27,20 @@ export class ReadingValuesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.readingValuesService.findOne(+id);
+  findOne(@Param() param: IdParamDto) {
+    return this.readingValuesService.findOne(param.id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateReadingValueDto: UpdateReadingValueDto) {
-    return this.readingValuesService.update(+id, updateReadingValueDto);
+  update(
+    @Param() param: IdParamDto,
+    @Body() updateReadingValueDto: UpdateReadingValueDto,
+  ) {
+    return this.readingValuesService.update(param.id, updateReadingValueDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.readingValuesService.remove(+id);
+  remove(@Param() param: IdParamDto) {
+    return this.readingValuesService.remove(param.id);
   }
 }
