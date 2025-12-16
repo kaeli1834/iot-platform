@@ -60,9 +60,37 @@ export class Overview implements OnInit, OnDestroy {
 
   public lineChartOptions: ChartConfiguration['options'] = {
     responsive: true,
+    maintainAspectRatio: false,
     animation: false,
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
     plugins: {
-      legend: { display: true },
+      legend: {
+        display: true,
+        position: 'top',
+        labels: {
+          usePointStyle: true,
+          padding: 15,
+          font: {
+            size: 12,
+            weight: 500,
+          },
+        },
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        padding: 12,
+        cornerRadius: 8,
+        titleFont: {
+          size: 13,
+          weight: 'bold',
+        },
+        bodyFont: {
+          size: 12,
+        },
+      },
       zoom: {
         zoom: {
           wheel: { enabled: true },
@@ -80,10 +108,31 @@ export class Overview implements OnInit, OnDestroy {
         type: 'time',
         time: {
           tooltipFormat: 'HH:mm:ss',
+          displayFormats: {
+            second: 'HH:mm:ss',
+            minute: 'HH:mm',
+            hour: 'HH:mm',
+          },
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)',
+        },
+        ticks: {
+          font: {
+            size: 11,
+          },
         },
       },
       y: {
         beginAtZero: false,
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)',
+        },
+        ticks: {
+          font: {
+            size: 11,
+          },
+        },
       },
     },
   };
