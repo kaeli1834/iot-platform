@@ -236,7 +236,6 @@ export class Overview implements OnInit, OnDestroy {
       });
     });
 
-    // ⚠️ mise à jour CORRECTE
     this.chart()?.chart?.update();
   }
 }
