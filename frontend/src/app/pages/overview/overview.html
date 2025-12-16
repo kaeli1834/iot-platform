@@ -1,12 +1,19 @@
 <div class="overview">
   <div class="header">
     <h1>Real-time Monitoring</h1>
-    <p>Sensor #1 - Data from the last 5 minutes</p>
+    <p>{{ selectedSensorName }} - Data from the last 5 minutes</p>
   </div>
 
   <div class="chart-card">
     <div class="chart-header">
-      <h2>Sensor Metrics</h2>
+      <div class="header-left">
+        <h2>Sensor Metrics</h2>
+        <select class="sensor-select" [(ngModel)]="selectedSensorId" (change)="onSensorChange()">
+          <option *ngFor="let sensor of sensors" [value]="sensor.id">
+            {{ sensor.name }}
+          </option>
+        </select>
+      </div>
       <div class="chart-info">
         <span class="status-dot"></span>
         <span>Updated every 5s</span>

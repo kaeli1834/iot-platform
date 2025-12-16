@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, viewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { BaseChartDirective } from 'ng2-charts';
 import {
   ChartConfiguration,
@@ -21,8 +22,10 @@ import { interval, Subscription } from 'rxjs';
 
 import { ReadingService } from '../../core/services/reading.service';
 import { MetricTypeService } from '../../core/services/metric-type.service';
+import { SensorService } from '../../core/services/sensor.service';
 import { ReadingDto } from '../../core/types/reading.type';
 import { MetricTypeDto } from '../../core/types/metric-type.type';
+import { SensorDto } from '../../core/types/sensor.type';
 
 Chart.register(
   TimeScale,
@@ -39,7 +42,7 @@ Chart.register(
 
 @Component({
   selector: 'app-overview',
-  imports: [CommonModule, BaseChartDirective],
+  imports: [CommonModule, FormsModule, BaseChartDirective],
   templateUrl: './overview.html',
   styleUrl: './overview.scss',
 })
@@ -49,14 +52,23 @@ export class Overview implements OnInit, OnDestroy {
 
   private readingService = inject(ReadingService);
   private metricTypeService = inject(MetricTypeService);
+  private sensorService = inject(SensorService);
 
-  metricTypes: MetricTypeDto[] = [];
+  public sensors: SensorDto[] = [];
+  public selectedSensorId: number = 1;
+
+  public metricTypes: MetricTypeDto[] = [];
 
   public lineChartType: ChartType = 'line';
 
   public lineChartData: ChartConfiguration['data'] = {
     datasets: [],
   };
+
+  get selectedSensorName(): string {
+    const sensor = this.sensors.find((s) => s.id === this.selectedSensorId);
+    return sensor ? sensor.name : 'Sensor #1';
+  }
 
   public lineChartOptions: ChartConfiguration['options'] = {
     responsive: true,
@@ -139,6 +151,7 @@ export class Overview implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.fetchMetricTypes();
+    this.fetchSensors();
     this.startPolling();
   }
 
@@ -154,9 +167,7 @@ export class Overview implements OnInit, OnDestroy {
   }
 
   private fetchLatestReadings(): void {
-    const sensorId = 1;
-
-    this.readingService.getLastReadingsForSensor(sensorId, 50).subscribe({
+    this.readingService.getLastReadingsForSensor(this.selectedSensorId, 50).subscribe({
       next: (readings) => this.updateChart(readings),
       error: (err) => console.error('Erreur sur les readings :', err),
     });
@@ -167,6 +178,22 @@ export class Overview implements OnInit, OnDestroy {
       next: (metricTypes) => (this.metricTypes = metricTypes),
       error: (err) => console.error('Erreur sur les types de métriques :', err),
     });
+  }
+
+  private fetchSensors(): void {
+    this.sensorService.getSensors().subscribe({
+      next: (sensors) => {
+        this.sensors = sensors;
+        if (sensors.length > 0 && !this.selectedSensorId) {
+          this.selectedSensorId = sensors[0].id;
+        }
+      },
+      error: (err) => console.error('Erreur sur les capteurs :', err),
+    });
+  }
+
+  public onSensorChange(): void {
+    this.fetchLatestReadings();
   }
 
   private updateChart(readings: ReadingDto[]): void {
