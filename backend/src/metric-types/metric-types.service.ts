@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { CreateMetricTypeDto } from './dto/create-metric-type.dto';
 import { UpdateMetricTypeDto } from './dto/update-metric-type.dto';
-import { InjectRepository } from '@nestjs/typeorm/dist/common/typeorm.decorators';
 import { MetricType } from './entities/metric-type.entity';
-import { Repository } from 'typeorm/browser/repository/Repository.js';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class MetricTypesService {
   @InjectRepository(MetricType)
-  private metricTypeRepository: Repository<MetricType>;
+  private readonly metricTypeRepository: Repository<MetricType>;
 
   create(createMetricTypeDto: CreateMetricTypeDto) {
     return this.metricTypeRepository.create(createMetricTypeDto);
