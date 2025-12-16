@@ -29,7 +29,7 @@ export class ReadingsService {
       .createQueryBuilder('reading')
       .leftJoinAndSelect('reading.readingValues', 'readingValue')
       .leftJoinAndSelect('readingValue.metricType', 'metricType')
-      .where('reading.sensorId = :sensorId', { sensorId });
+      .where('reading.sensor_id = :sensorId', { sensorId });
 
     if (startDate) {
       query = query.andWhere('reading.timestamp >= :startDate', { startDate });
