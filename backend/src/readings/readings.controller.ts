@@ -1,8 +1,9 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query, UseInterceptors } from '@nestjs/common';
 import { ReadingsService } from './readings.service';
 import { ResponseReadingDto } from './dto/response-reading.dto';
-import { TransformInterceptor } from 'src/common/interceptors/transform.interceptor';
-import { Query, UseInterceptors } from '@nestjs/common/decorators';
+import { TransformInterceptor } from '../common/interceptors/transform.interceptor';
+import { QueryLastReadingsDto } from './dto/query-last-readings.dto';
+import { QueryRangeReadingsDto } from './dto/query-range-readings.dto';
 
 @Controller('readings')
 @UseInterceptors(new TransformInterceptor(ResponseReadingDto))
@@ -11,26 +12,18 @@ export class ReadingsController {
 
   // get lasts 100 readings for a sensor
   @Get('lasts')
-  findBySensor(
-    @Query('sensorId') sensorId: string,
-    @Query('limit') limit: string = '100',
-  ) {
-    return this.readingsService.findBySensor(+sensorId, +limit);
+  findBySensor(@Query() query: QueryLastReadingsDto) {
+    return this.readingsService.findBySensor(query.sensorId, query.limit);
   }
 
   // get readings for a sensor between two dates and metric
   @Get('range')
-  findBySensorBetweenDates(
-    @Query('sensorId') sensorId: string,
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
-    @Query('metricTypeId') metricTypeId: string,
-  ) {
+  findBySensorBetweenDates(@Query() query: QueryRangeReadingsDto) {
     return this.readingsService.findBySensorBetweenDates(
-      +sensorId,
-      new Date(startDate),
-      new Date(endDate),
-      +metricTypeId,
+      query.sensorId,
+      query.startDate,
+      query.endDate,
+      query.metricTypeId,
     );
   }
 }

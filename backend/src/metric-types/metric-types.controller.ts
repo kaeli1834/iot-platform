@@ -12,7 +12,7 @@ import { MetricTypesService } from './metric-types.service';
 import { CreateMetricTypeDto } from './dto/create-metric-type.dto';
 import { UpdateMetricTypeDto } from './dto/update-metric-type.dto';
 import { ResponseMetricTypeDto } from './dto/response-metric-type.dto';
-import { TransformInterceptor } from 'src/common/interceptors/transform.interceptor';
+import { TransformInterceptor } from '../common/interceptors/transform.interceptor';
 
 @Controller('metric-types')
 @UseInterceptors(new TransformInterceptor(ResponseMetricTypeDto))
