@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm/browser/repository/Repository.js';
 import { Reading } from './entities/reading.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class ReadingsService {
   @InjectRepository(Reading)
-  private readingRepository: Repository<Reading>;
+  private readonly readingRepository: Repository<Reading>;
 
   async findBySensor(sensorId: number, limit: number) {
     const readings = await this.readingRepository.find({
@@ -29,7 +29,7 @@ export class ReadingsService {
       .createQueryBuilder('reading')
       .leftJoinAndSelect('reading.readingValues', 'readingValue')
       .leftJoinAndSelect('readingValue.metricType', 'metricType')
-      .where('reading.sensor_id = :sensorId', { sensorId });
+      .where('reading.sensor.id = :sensorId', { sensorId });
 
     if (startDate) {
       query = query.andWhere('reading.timestamp >= :startDate', { startDate });
